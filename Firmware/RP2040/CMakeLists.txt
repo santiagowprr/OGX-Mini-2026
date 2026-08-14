@@ -294,8 +294,8 @@ endif()
 # Do not add -DOGXM_BOARD here; Config.h defines OGXM_BOARD from CONFIG_OGXM_BOARD_* to avoid redefinition warnings
 
 # Main loop delay (microseconds). 0 = lowest latency (default). Set to 250+ for lower CPU.
-set(MAIN_LOOP_DELAY_US 0 CACHE STRING "Main loop delay in microseconds; 0 = low latency (default)")
-add_compile_definitions(MAIN_LOOP_DELAY_US=${MAIN_LOOP_DELAY_US})
+# set(MAIN_LOOP_DELAY_US 0 CACHE STRING "Main loop delay in microseconds; 0 = low latency (default)")
+# add_compile_definitions(MAIN_LOOP_DELAY_US=${MAIN_LOOP_DELAY_US})
 
 # =============================================================================
 # SMOKE TEST: 500ms (500 000 us) delay for RP2040_ZERO, 0us for other boards
