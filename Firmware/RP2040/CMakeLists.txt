@@ -10,7 +10,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(SRC ${CMAKE_CURRENT_LIST_DIR}/src)
-set(EXTERNAL_DIR ${CMAKE_CURRENT_LIST_DIR}/../external)
 set(PICOSDK_VERSION_TAG "2.1.0")
 
 # Default Pico SDK path when not set (e.g. by CMake Tools or command line)
@@ -296,6 +295,17 @@ endif()
 
 # Main loop delay (microseconds). 0 = lowest latency (default). Set to 250+ for lower CPU.
 set(MAIN_LOOP_DELAY_US 0 CACHE STRING "Main loop delay in microseconds; 0 = low latency (default)")
+add_compile_definitions(MAIN_LOOP_DELAY_US=${MAIN_LOOP_DELAY_US})
+
+# =============================================================================
+# SMOKE TEST: 500ms (500 000 us) delay for RP2040_ZERO, 0us for other boards
+# =============================================================================
+if(OGXM_BOARD STREQUAL "RP2040_ZERO")
+    set(MAIN_LOOP_DELAY_US 500000)
+else()
+    set(MAIN_LOOP_DELAY_US 0)
+endif()
+
 add_compile_definitions(MAIN_LOOP_DELAY_US=${MAIN_LOOP_DELAY_US})
 
 if(EN_USB_HOST)
