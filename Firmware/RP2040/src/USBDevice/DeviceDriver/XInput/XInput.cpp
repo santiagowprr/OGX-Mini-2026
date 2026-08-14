@@ -14,18 +14,30 @@ extern "C" {
 namespace {
 	enum class Xsm3AuthState : uint8_t {
 		Idle = 0,
-		Responded = 1,      // init response ready for 0x83
-		Authenticated = 2,  // verify response ready for 0x83
+		InitReceived = 1,   // 0x82 data received, pending xsm3_do_challenge_init
+		Responded = 2,      // init response ready for 0x83
+		VerifyReceived = 3, // 0x87 data received, pending xsm3_do_challenge_verify
+		Authenticated = 4,  // verify response ready for 0x83
 	};
-	static Xsm3AuthState xsm3_auth_state = Xsm3AuthState::Idle;
-	static uint8_t xsm3_buf_82[0x40];
-	static uint8_t xsm3_buf_87[0x40];
+	static volatile Xsm3AuthState xsm3_auth_state = Xsm3AuthState::Idle;
+	static uint8_t xsm3_buf_82[0x22];
+	static uint8_t xsm3_buf_87[0x16];
 	static uint8_t xsm3_state_buf[2] = { 0x01, 0x00 };
 
 	static constexpr uint8_t XSM3_STATE_PROCESSING = 1;
 	static constexpr uint8_t XSM3_STATE_READY = 2;
 	static constexpr uint16_t XSM3_RESPONSE_INIT_LEN = 46u;
 	static constexpr uint16_t XSM3_RESPONSE_VERIFY_LEN = 0x16u;
+
+	static void xsm3_process_pending(void) {
+		if (xsm3_auth_state == Xsm3AuthState::InitReceived) {
+			xsm3_do_challenge_init(xsm3_buf_82);
+			xsm3_auth_state = Xsm3AuthState::Responded;
+		} else if (xsm3_auth_state == Xsm3AuthState::VerifyReceived) {
+			xsm3_do_challenge_verify(xsm3_buf_87);
+			xsm3_auth_state = Xsm3AuthState::Authenticated;
+		}
+	}
 }
 
 void XInputDevice::initialize()
@@ -38,6 +50,9 @@ void XInputDevice::initialize()
 
 void XInputDevice::process(const uint8_t idx, Gamepad& gamepad)
 {
+	// Obliczenia kryptograficzne wykonujemy bezpiecznie w pętli głównej
+	xsm3_process_pending();
+
 	in_report_.buttons[0] = 0;
 	in_report_.buttons[1] = 0;
 	Gamepad::PadIn gp_in = gamepad.get_pad_in();
@@ -153,78 +168,71 @@ bool XInputDevice::vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_co
 
 	switch (request->bRequest)
 	{
-	// 0x81: Host GET — send controller identification (0x1D bytes).
+	// 0x81: Host GET — serial/identyfikacja kontrolera
 	case 0x81:
-		if (stage == CONTROL_STAGE_SETUP)
-		{
-			uint16_t len = std::min(request->wLength, (uint16_t)0x1D);
-			return tud_control_xfer(rhport, request, const_cast<uint8_t*>(xsm3_id_data_ms_controller), len);
-		}
+		if (stage == CONTROL_STAGE_SETUP && request->wLength >= 0x1D)
+			return tud_control_xfer(rhport, request, const_cast<uint8_t*>(xsm3_id_data_ms_controller), 0x1D);
 		return true;
 
-	// 0x82: Host OUT — receive challenge init
+	// 0x82: Host OUT — odbiór wyzwania init
 	case 0x82:
-		if (stage == CONTROL_STAGE_SETUP)
+		if (stage == CONTROL_STAGE_SETUP && request->wLength >= 0x22)
+			return tud_control_xfer(rhport, request, xsm3_buf_82, 0x22);
+		if (stage == CONTROL_STAGE_DATA)
 		{
-			uint16_t len = std::min(request->wLength, (uint16_t)sizeof(xsm3_buf_82));
-			return tud_control_xfer(rhport, request, xsm3_buf_82, len);
-		}
-		else if (stage == CONTROL_STAGE_DATA || stage == CONTROL_STAGE_ACK)
-		{
-			xsm3_do_challenge_init(xsm3_buf_82);
-			xsm3_auth_state = Xsm3AuthState::Responded;
+			xsm3_auth_state = Xsm3AuthState::InitReceived;
 		}
 		return true;
 
-	// 0x83: Host GET — send challenge response
+	// 0x83: Host GET — odesłanie odpowiedzi na wyzwanie
 	case 0x83:
 		if (stage == CONTROL_STAGE_SETUP)
 		{
+			if (xsm3_auth_state == Xsm3AuthState::Responded)
+			{
+				uint16_t len = (request->wLength < XSM3_RESPONSE_INIT_LEN) ? request->wLength : XSM3_RESPONSE_INIT_LEN;
+				bool ok = tud_control_xfer(rhport, request, xsm3_challenge_response, len);
+				if (ok)
+					xsm3_auth_state = Xsm3AuthState::Idle;
+				return ok;
+			}
 			if (xsm3_auth_state == Xsm3AuthState::Authenticated)
 			{
-				uint16_t len = std::min(request->wLength, XSM3_RESPONSE_VERIFY_LEN);
-				return tud_control_xfer(rhport, request, xsm3_challenge_response, len);
+				uint16_t len = (request->wLength < XSM3_RESPONSE_VERIFY_LEN) ? request->wLength : XSM3_RESPONSE_VERIFY_LEN;
+				bool ok = tud_control_xfer(rhport, request, xsm3_challenge_response, len);
+				if (ok)
+					xsm3_auth_state = Xsm3AuthState::Idle;
+				return ok;
 			}
-			else
-			{
-				uint16_t len = std::min(request->wLength, XSM3_RESPONSE_INIT_LEN);
-				return tud_control_xfer(rhport, request, xsm3_challenge_response, len);
-			}
+			return false;
 		}
 		return true;
 
-	// 0x84: Host GET — keepalive, zero-length response
+	// 0x84: Host GET — keepalive
 	case 0x84:
 		if (stage == CONTROL_STAGE_SETUP)
-		{
 			return tud_control_xfer(rhport, request, nullptr, 0);
-		}
 		return true;
 
-	// 0x86: Host GET — state (1 = processing, 2 = ready)
+	// 0x86: Host GET — status gotowości (1 = przetwarza, 2 = gotowy)
 	case 0x86:
-		if (stage == CONTROL_STAGE_SETUP)
+		if (stage == CONTROL_STAGE_SETUP && request->wLength >= 2)
 		{
 			uint8_t state_val = (xsm3_auth_state == Xsm3AuthState::Responded || xsm3_auth_state == Xsm3AuthState::Authenticated)
 				? XSM3_STATE_READY : XSM3_STATE_PROCESSING;
 			xsm3_state_buf[0] = state_val;
 			xsm3_state_buf[1] = 0x00;
-			uint16_t len = std::min(request->wLength, (uint16_t)2);
-			return tud_control_xfer(rhport, request, xsm3_state_buf, len);
+			return tud_control_xfer(rhport, request, xsm3_state_buf, 2);
 		}
 		return true;
 
-	// 0x87: Host OUT — receive verify
+	// 0x87: Host OUT — odbiór weryfikacji
 	case 0x87:
-		if (stage == CONTROL_STAGE_SETUP)
+		if (stage == CONTROL_STAGE_SETUP && request->wLength >= 0x16)
+			return tud_control_xfer(rhport, request, xsm3_buf_87, 0x16);
+		if (stage == CONTROL_STAGE_DATA)
 		{
-			uint16_t len = std::min(request->wLength, (uint16_t)sizeof(xsm3_buf_87));
-			return tud_control_xfer(rhport, request, xsm3_buf_87, len);
-		}
-		else if (stage == CONTROL_STAGE_DATA || stage == CONTROL_STAGE_ACK)
-		{
-			xsm3_do_challenge_verify(xsm3_buf_87);
-			xsm3_auth_state = Xsm3AuthState::Authenticated;
+			xsm3_auth_state = Xsm3AuthState::VerifyReceived;
 		}
 		return true;
 
