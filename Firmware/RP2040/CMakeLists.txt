@@ -295,11 +295,7 @@ endif()
 # Do not add -DOGXM_BOARD here; Config.h defines OGXM_BOARD from CONFIG_OGXM_BOARD_* to avoid redefinition warnings
 
 # Main loop delay (microseconds). 0 = lowest latency (default). Set to 250+ for lower CPU / RP2040-Zero stability.
-if(OGXM_BOARD STREQUAL "RP2040_ZERO")
-    set(MAIN_LOOP_DELAY_US 250 CACHE STRING "Main loop delay in microseconds; 0 = low latency (default)")
-else()
-    set(MAIN_LOOP_DELAY_US 0 CACHE STRING "Main loop delay in microseconds; 0 = low latency (default)")
-endif()
+set(MAIN_LOOP_DELAY_US 250 CACHE STRING "Main loop delay in microseconds; 0 = low latency (default)")
 add_compile_definitions(MAIN_LOOP_DELAY_US=${MAIN_LOOP_DELAY_US})
 
 if(EN_USB_HOST)
