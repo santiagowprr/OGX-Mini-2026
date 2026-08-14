@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(SRC ${CMAKE_CURRENT_LIST_DIR}/src)
+set(EXTERNAL_DIR ${CMAKE_CURRENT_LIST_DIR}/../external)
 set(PICOSDK_VERSION_TAG "2.1.0")
 
 # Default Pico SDK path when not set (e.g. by CMake Tools or command line)
