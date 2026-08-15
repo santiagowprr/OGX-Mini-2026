@@ -61,14 +61,23 @@ void JoystickSettings::set_from_raw(const JoystickSettingsRaw& raw)
     invert_x = raw.invert_x;
 }
 
+// void JoystickSettings::set_xbox360_stock_feel(bool right_stick)
+// {
+//     /* Reset to firmware defaults, then apply 360-like shaping.
+//      * Keep remapped deadzone mild (not Microsoft's ~24% software filter) so console games
+//      * that also apply deadzones are not double-dulled. Curve < 1 softens the center and
+//      * steepens the outer third — closer to a stock 360 pad than a near-linear Series stick. */
+//     *this = JoystickSettings{};
+//     dz_inner = Fix16(right_stick ? 0.09f : 0.08f);
+//     curve = Fix16(0.35f);
+//     uncap_radius = false;
+// }
+
 void JoystickSettings::set_xbox360_stock_feel(bool right_stick)
 {
-    /* Reset to firmware defaults, then apply 360-like shaping.
-     * Keep remapped deadzone mild (not Microsoft's ~24% software filter) so console games
-     * that also apply deadzones are not double-dulled. Curve < 1 softens the center and
-     * steepens the outer third — closer to a stock 360 pad than a near-linear Series stick. */
+    /* Pełna liniowość - czysty sygnał 1:1, identyczny jak w trybie PS3 */
     *this = JoystickSettings{};
-    dz_inner = Fix16(right_stick ? 0.09f : 0.08f);
-    curve = Fix16(0.35f);
+    dz_inner = Fix16(0.0f); // Zero martwej strefy z poziomu firmware'u
+    curve = Fix16(1.0f);    // W pełni liniowa krzywa
     uncap_radius = false;
 }
