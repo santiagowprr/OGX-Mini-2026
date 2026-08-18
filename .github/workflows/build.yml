@@ -25,11 +25,17 @@ jobs:
       - name: Update Nested Submodules Recursively
         run: |
           git submodule update --init --recursive
+          # Bezpośrednie dociągnięcie submodułów wewnątrz bluepad32 (BTstack)
+          if [ -d "Firmware/external/bluepad32" ]; then
+            cd Firmware/external/bluepad32
+            git submodule update --init --recursive
+            cd -
+          fi
 
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib python3-pycryptodome
+          sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib python3-pycryptodome pkg-config libusb-1.0-0-dev
 
       - name: Get Pico SDK
         run: git clone --branch 2.1.0 --recurse-submodules https://github.com/raspberrypi/pico-sdk.git
