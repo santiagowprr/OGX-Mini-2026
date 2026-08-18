@@ -22,17 +22,6 @@ jobs:
           fetch-depth: 1
           submodules: false
 
-      - name: Fetch Required Submodules
-        run: |
-          git submodule update --init Firmware/external/tinyusb
-          git submodule update --init Firmware/external/Pico-PIO-USB
-          git submodule update --init Firmware/external/bluepad32
-          git submodule update --init Firmware/external/libfixmath
-          cd Firmware/external/bluepad32
-          git submodule update --init external/btstack
-          cd ../../../
-          ls -la Firmware/external/bluepad32/external/btstack/src/ble/gatt-service/
-
       - name: Setup ARM Toolchain (Fast CDN)
         uses: carlosperate/arm-none-eabi-gcc-action@v1
         with:
@@ -45,6 +34,21 @@ jobs:
       - name: Get Pico SDK (Shallow)
         run: |
           git clone --depth 1 --branch 2.1.0 --recurse-submodules --shallow-submodules https://github.com/raspberrypi/pico-sdk.git
+
+      - name: Fetch Required Submodules
+        run: |
+          git submodule update --init --recursive Firmware/external/tinyusb
+          git submodule update --init --recursive Firmware/external/Pico-PIO-USB
+          git submodule update --init --recursive Firmware/external/bluepad32
+          git submodule update --init --recursive Firmware/external/libfixmath
+
+          # Fallback: if btstack is missing, copy it from pico-sdk
+          if [ ! -f "Firmware/external/bluepad32/external/btstack/src/ble/gatt-service/hids_client.c" ]; then
+            echo "Copying btstack from pico-sdk into bluepad32..."
+            mkdir -p Firmware/external/bluepad32/external
+            rm -rf Firmware/external/bluepad32/external/btstack
+            cp -r pico-sdk/lib/btstack Firmware/external/bluepad32/external/btstack
+          fi
 
       - name: Create Build and Output Folders
         run: mkdir -p build output
