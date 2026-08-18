@@ -20,15 +20,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 1
+          fetch-depth: 0
 
-      - name: Update Nested Submodules Recursively
+      - name: Ensure All Nested Submodules and BTstack
         run: |
-          git submodule update --init --recursive --depth 1
-          if [ -d "Firmware/external/bluepad32" ]; then
-            cd Firmware/external/bluepad32
-            git submodule update --init --recursive --depth 1
-            cd ../../../
+          git submodule update --init --recursive
+          # If btstack was not cloned by git submodules, clone it directly
+          if [ ! -f "Firmware/external/bluepad32/external/btstack/src/ble/gatt-service/hids_client.c" ]; then
+            echo "BTstack missing or incomplete. Fetching BTstack repository..."
+            rm -rf Firmware/external/bluepad32/external/btstack
+            git clone --depth 1 https://github.com/bluekitchen/btstack.git Firmware/external/bluepad32/external/btstack
           fi
 
       - name: Setup ARM Toolchain (Fast CDN)
