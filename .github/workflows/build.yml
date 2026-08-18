@@ -25,12 +25,6 @@ jobs:
       - name: Update Nested Submodules Recursively
         run: |
           git submodule update --init --recursive
-          # Bezpośrednie dociągnięcie submodułów wewnątrz bluepad32 (BTstack)
-          if [ -d "Firmware/external/bluepad32" ]; then
-            cd Firmware/external/bluepad32
-            git submodule update --init --recursive
-            cd -
-          fi
 
       - name: Install Dependencies
         run: |
