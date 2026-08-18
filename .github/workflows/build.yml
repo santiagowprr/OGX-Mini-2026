@@ -42,14 +42,6 @@ jobs:
           git submodule update --init --recursive Firmware/external/bluepad32
           git submodule update --init --recursive Firmware/external/libfixmath
 
-          # Fallback: if btstack is missing, copy it from pico-sdk
-          if [ ! -f "Firmware/external/bluepad32/external/btstack/src/ble/gatt-service/hids_client.c" ]; then
-            echo "Copying btstack from pico-sdk into bluepad32..."
-            mkdir -p Firmware/external/bluepad32/external
-            rm -rf Firmware/external/bluepad32/external/btstack
-            cp -r pico-sdk/lib/btstack Firmware/external/bluepad32/external/btstack
-          fi
-
       - name: Create Build and Output Folders
         run: mkdir -p build output
 
