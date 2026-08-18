@@ -46,8 +46,7 @@ jobs:
           rm -rf picotool
 
       - name: Patch Pico SDK for renamed BTstack HIDS file
-        run: git -C pico-sdk apply --ignore-whitespace Firmware/external/patches/pico_sdk_hids_host.diff
-
+        run: git -C pico-sdk apply --ignore-whitespace ${{ github.workspace }}/Firmware/external/patches/pico_sdk_hids_host.diff
 
       - name: Create Build and Output Folders
         run: mkdir -p build output
