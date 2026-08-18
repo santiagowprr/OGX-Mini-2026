@@ -22,16 +22,16 @@ jobs:
           fetch-depth: 1
           submodules: false
 
-      - name: Fetch Only RP2040/Pico Submodules (Fast)
+      - name: Fetch Required Submodules
         run: |
-          git submodule update --init --depth 1 Firmware/external/tinyusb
-          git submodule update --init --depth 1 Firmware/external/Pico-PIO-USB
-          git submodule update --init --depth 1 Firmware/external/bluepad32
-          git submodule update --init --depth 1 Firmware/external/libfixmath
-          # Fetch the exact pinned BTstack submodule from bluepad32
+          git submodule update --init Firmware/external/tinyusb
+          git submodule update --init Firmware/external/Pico-PIO-USB
+          git submodule update --init Firmware/external/bluepad32
+          git submodule update --init Firmware/external/libfixmath
           cd Firmware/external/bluepad32
-          git submodule update --init --depth 1 external/btstack
+          git submodule update --init external/btstack
           cd ../../../
+          ls -la Firmware/external/bluepad32/external/btstack/src/ble/gatt-service/
 
       - name: Setup ARM Toolchain (Fast CDN)
         uses: carlosperate/arm-none-eabi-gcc-action@v1
