@@ -19,36 +19,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
-          submodules: false
+          submodules: recursive
+          fetch-depth: 0
 
-      - name: Setup ARM Toolchain (Fast CDN)
-        uses: carlosperate/arm-none-eabi-gcc-action@v1
-        with:
-          release: '13.3.Rel1'
-
-      - name: Install Python Cryptography
+      - name: Update Nested Submodules Recursively
         run: |
-          python3 -m pip install --break-system-packages pycryptodome
-
-      - name: Get Pico SDK (Shallow)
-        run: |
-          git clone --depth 1 --branch 2.1.0 --recurse-submodules --shallow-submodules https://github.com/raspberrypi/pico-sdk.git
-
-      - name: Fetch Required Submodules
-        run: |
-          git submodule update --init Firmware/external/tinyusb
-          git submodule update --init Firmware/external/Pico-PIO-USB
-          git submodule update --init Firmware/external/bluepad32
-          git submodule update --init Firmware/external/libfixmath
-
-          # Enter bluepad32 to fetch its internal BTstack submodule
-          cd Firmware/external/bluepad32
           git submodule update --init --recursive
-          cd ../../../
 
-          # Verify that hids_client.c is present
-          ls -lh Firmware/external/bluepad32/external/btstack/src/ble/gatt-service/hids_client.c
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib python3-pycryptodome
+
+      - name: Get Pico SDK
+        run: git clone --branch 2.1.0 --recurse-submodules https://github.com/raspberrypi/pico-sdk.git
 
       - name: Create Build and Output Folders
         run: mkdir -p build output
@@ -62,7 +46,7 @@ jobs:
                 -DOGXM_BOARD=${{ matrix.board }} \
                 -DMAX_GAMEPADS=1 \
                 ../Firmware/RP2040
-          cmake --build . -- -j$(nproc)
+          cmake --build .
 
           # Find and copy the generated .uf2 file
           FILE=$(find . -maxdepth 1 -name "OGX-Mini-*-${{ matrix.board }}*.uf2" | head -n 1)
