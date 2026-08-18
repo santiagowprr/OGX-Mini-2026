@@ -20,25 +20,29 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Update Nested Submodules Recursively
         run: |
-          git submodule update --init --recursive
+          git submodule update --init --recursive --depth 1
           if [ -d "Firmware/external/bluepad32" ]; then
             cd Firmware/external/bluepad32
-            git submodule update --init --recursive
+            git submodule update --init --recursive --depth 1
             cd ../../../
           fi
 
-      - name: Install Dependencies
+      - name: Setup ARM Toolchain (Fast CDN)
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: '13.3.Rel1'
+
+      - name: Install Python Cryptography
         run: |
-          sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
           python3 -m pip install --break-system-packages pycryptodome
 
-      - name: Get Pico SDK
-        run: git clone --branch 2.1.0 --recurse-submodules https://github.com/raspberrypi/pico-sdk.git
+      - name: Get Pico SDK (Shallow)
+        run: |
+          git clone --depth 1 --branch 2.1.0 --recurse-submodules --shallow-submodules https://github.com/raspberrypi/pico-sdk.git
 
       - name: Create Build and Output Folders
         run: mkdir -p build output
@@ -52,7 +56,7 @@ jobs:
                 -DOGXM_BOARD=${{ matrix.board }} \
                 -DMAX_GAMEPADS=1 \
                 ../Firmware/RP2040
-          cmake --build .
+          cmake --build . -- -j$(nproc)
 
           # Find and copy the generated .uf2 file
           FILE=$(find . -maxdepth 1 -name "OGX-Mini-*-${{ matrix.board }}*.uf2" | head -n 1)
