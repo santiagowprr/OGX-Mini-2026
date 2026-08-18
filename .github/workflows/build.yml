@@ -29,10 +29,21 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib python3-pycryptodome pkg-config libusb-1.0-0-dev
+          sudo apt install -y cmake build-essential gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib python3-pycryptodome pkg-config libusb-1.0-0-dev
 
       - name: Get Pico SDK
         run: git clone --branch 2.1.0 --recurse-submodules https://github.com/raspberrypi/pico-sdk.git
+
+      - name: Build & Install Picotool
+        run: |
+          git clone --branch 2.1.0 https://github.com/raspberrypi/picotool.git
+          cd picotool
+          mkdir build && cd build
+          cmake -DPICO_SDK_PATH=${{ github.workspace }}/pico-sdk ..
+          cmake --build . -j$(nproc)
+          sudo cmake --install .
+          cd ../..
+          rm -rf picotool
 
       - name: Create Build and Output Folders
         run: mkdir -p build output
@@ -46,7 +57,7 @@ jobs:
                 -DOGXM_BOARD=${{ matrix.board }} \
                 -DMAX_GAMEPADS=1 \
                 ../Firmware/RP2040
-          cmake --build .
+          cmake --build . -j$(nproc)
 
           # Find and copy the generated .uf2 file
           FILE=$(find . -maxdepth 1 -name "OGX-Mini-*-${{ matrix.board }}*.uf2" | head -n 1)
