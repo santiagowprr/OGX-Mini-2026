@@ -28,9 +28,10 @@ jobs:
           git submodule update --init --depth 1 Firmware/external/Pico-PIO-USB
           git submodule update --init --depth 1 Firmware/external/bluepad32
           git submodule update --init --depth 1 Firmware/external/libfixmath
-          # Clone stable BTstack v1.5.8 with hids_client.c support
-          rm -rf Firmware/external/bluepad32/external/btstack
-          git clone --depth 1 --branch v1.5.8 https://github.com/bluekitchen/btstack.git Firmware/external/bluepad32/external/btstack
+          # Fetch the exact pinned BTstack submodule from bluepad32
+          cd Firmware/external/bluepad32
+          git submodule update --init --depth 1 external/btstack
+          cd ../../../
 
       - name: Setup ARM Toolchain (Fast CDN)
         uses: carlosperate/arm-none-eabi-gcc-action@v1
