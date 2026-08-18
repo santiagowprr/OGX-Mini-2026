@@ -19,15 +19,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
-          fetch-depth: 0
+          fetch-depth: 1
+          submodules: false
 
-      - name: Ensure All Nested Submodules and BTstack
+      - name: Fetch Only RP2040/Pico Submodules (Fast)
         run: |
-          git submodule update --init --recursive
-          # If btstack was not cloned by git submodules, clone it directly
+          git submodule update --init --depth 1 Firmware/external/tinyusb
+          git submodule update --init --depth 1 Firmware/external/Pico-PIO-USB
+          git submodule update --init --depth 1 Firmware/external/bluepad32
+          git submodule update --init --depth 1 Firmware/external/libfixmath
+          # Direct shallow clone of BTstack inside bluepad32
           if [ ! -f "Firmware/external/bluepad32/external/btstack/src/ble/gatt-service/hids_client.c" ]; then
-            echo "BTstack missing or incomplete. Fetching BTstack repository..."
             rm -rf Firmware/external/bluepad32/external/btstack
             git clone --depth 1 https://github.com/bluekitchen/btstack.git Firmware/external/bluepad32/external/btstack
           fi
