@@ -28,8 +28,9 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          sudo apt update
-          sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib python3-pycryptodome
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+          python3 -m pip install --break-system-packages pycryptodome
 
       - name: Get Pico SDK
         run: git clone --branch 2.1.0 --recurse-submodules https://github.com/raspberrypi/pico-sdk.git
