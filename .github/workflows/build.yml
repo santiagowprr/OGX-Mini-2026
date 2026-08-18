@@ -37,10 +37,18 @@ jobs:
 
       - name: Fetch Required Submodules
         run: |
-          git submodule update --init --recursive Firmware/external/tinyusb
-          git submodule update --init --recursive Firmware/external/Pico-PIO-USB
-          git submodule update --init --recursive Firmware/external/bluepad32
-          git submodule update --init --recursive Firmware/external/libfixmath
+          git submodule update --init Firmware/external/tinyusb
+          git submodule update --init Firmware/external/Pico-PIO-USB
+          git submodule update --init Firmware/external/bluepad32
+          git submodule update --init Firmware/external/libfixmath
+
+          # Enter bluepad32 to fetch its internal BTstack submodule
+          cd Firmware/external/bluepad32
+          git submodule update --init --recursive
+          cd ../../../
+
+          # Verify that hids_client.c is present
+          ls -lh Firmware/external/bluepad32/external/btstack/src/ble/gatt-service/hids_client.c
 
       - name: Create Build and Output Folders
         run: mkdir -p build output
