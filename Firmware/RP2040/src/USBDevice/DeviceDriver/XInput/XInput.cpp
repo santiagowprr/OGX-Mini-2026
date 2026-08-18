@@ -4,6 +4,7 @@
 
 #include "pico/time.h"
 #include "tusb.h"
+#include "device/dcd.h"
 #include "USBDevice/DeviceDriver/XInput/tud_xinput/tud_xinput.h"
 #include "USBDevice/DeviceDriver/XInput/XInput.h"
 
@@ -116,37 +117,42 @@ void XInputDevice::process(const uint8_t idx, Gamepad& gamepad)
 	// Remote wake when host has suspended the bus (e.g. 360 "off" with USB power kept):
 	// - Guide (Home) press, or
 	// - Start held for 3 seconds (avoids holding Guide on Xbox One/PS5 pads, which can turn the controller off).
-	{
-		static bool start_wake_sent = false;
-		static bool start_held = false;
-		static absolute_time_t start_hold_begin = { 0 };
-		bool start_pressed = (gp_in.buttons & Gamepad::BUTTON_START) != 0;
-		if (start_pressed)
-		{
-			if (!start_held)
-			{
-				start_held = true;
-				start_hold_begin = get_absolute_time();
-			}
-			else
-			{
-				uint64_t hold_ms = to_ms_since_boot(get_absolute_time()) - to_ms_since_boot(start_hold_begin);
-				if (hold_ms >= 3000 && tud_suspended() && !start_wake_sent)
-				{
-					tud_remote_wakeup();
-					start_wake_sent = true;
-				}
-			}
-		}
-		else
-		{
-			start_held = false;
-			start_wake_sent = false;
-		}
-		if (tud_suspended() && (gp_in.buttons & Gamepad::BUTTON_SYS))
-			tud_remote_wakeup();
-	}
+	// Remote wake
+{
+static bool start_wake_sent = false;
+static bool start_held = false;
+static absolute_time_t start_hold_begin = { 0 };
+bool start_pressed = (gp_in.buttons & Gamepad::BUTTON_START) != 0;
+if (start_pressed)
+{
+if (!start_held)
+{
+start_held = true;
+start_hold_begin = get_absolute_time();
+}
+else
+{
+uint64_t hold_ms = to_ms_since_boot(get_absolute_time()) - to_ms_since_boot(start_hold_begin);
+if (hold_ms >= 3000 && tud_suspended() && !start_wake_sent)
+{
+// Twarde wymuszenie na porcie USB 0 zamiast tud_remote_wakeup()
+dcd_remote_wakeup(0);
+start_wake_sent = true;
+}
+}
+}
+else
+{
+start_held = false;
+start_wake_sent = false;
+}
 
+if (tud_suspended() && (gp_in.buttons & Gamepad::BUTTON_SYS))
+{
+// Twarde wymuszenie na porcie USB 0 zamiast tud_remote_wakeup()
+dcd_remote_wakeup(0);
+}
+}
 	// send_report() only transmits when endpoint is free; otherwise we keep latest in_report_ for get_report_cb
 	tud_xinput::send_report((uint8_t*)&in_report_, sizeof(XInput::InReport));
 
