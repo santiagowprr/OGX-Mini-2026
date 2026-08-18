@@ -31,11 +31,8 @@ set(PICO_BTSTACK_PATH ${BTSTACK_ROOT})
 set(LIBFIXMATH_PATH ${EXTERNAL_DIR}/libfixmath)
 
 #get_pico_sdk(${EXTERNAL_DIR} ${PICOSDK_VERSION_TAG})
-init_git_submodules(${EXTERNAL_DIR}
-    ${BLUEPAD32_ROOT}
-    ${BTSTACK_ROOT}
-    ${PICO_TINYUSB_PATH}
-)
+# NOWY FRAGMENT:
+init_git_submodules(${EXTERNAL_DIR})
 apply_lib_patches(${EXTERNAL_DIR})
 
 set(SOURCES_BOARD 
